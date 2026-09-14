@@ -11,7 +11,7 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (move_players, move_ball).chain());
+        app.add_systems(Update, (move_players, move_ball, collide_and_score).chain());
     }
 }
 
@@ -50,6 +50,7 @@ fn setup(
         Mesh2d(meshes.add(RectangleMeshBuilder::new(10.0, 75.0).build())),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::WHITE))),
         Transform::from_xyz(-235.0, 0.0, 0.0),
+        Score {val: 0},
         Player1,
     ));
 
@@ -57,6 +58,7 @@ fn setup(
         Mesh2d(meshes.add(RectangleMeshBuilder::new(10.0, 75.0).build())),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::WHITE))),
         Transform::from_xyz(235.0, 0.0, 0.0),
+        Score {val: 0},
         Player2,
     ));
 
@@ -73,6 +75,11 @@ pub struct Player1;
 
 #[derive(Component)]
 pub struct Player2;
+
+#[derive(Component)]
+pub struct Score {
+    val: i32
+}
 
 #[derive(Component)]
 pub struct BallDir {
@@ -106,4 +113,28 @@ fn move_ball(mut ball: Single<(&BallDir, &mut Transform)>, time: Res<Time>) {
 
     transform_b.translation.x += ball_dir.x * time.delta_secs() * BALL_SPEED;
     transform_b.translation.y += ball_dir.y * time.delta_secs() * BALL_SPEED;
+}
+
+fn collide_and_score(mut score_1: Single<&mut Score, (With<Player1>, Without<Player2>)>, mut score_2: Single<&mut Score, (With<Player2>, Without<Player1>)>, transform_b: Single<&Transform, With<BallDir>>, mut ball_dir: Single<&mut BallDir>, transform_1: Single<&Transform, (With<Player1>, Without<Player2>)>, transform_2: Single<&Transform, (With<Player2>, Without<Player1>)>, mut exit: MessageWriter<AppExit>) {
+    if transform_b.translation.y > 135.0 || transform_b.translation.y < -135.0 {
+        ball_dir.y *= -1.0;
+    }
+
+    if transform_b.translation.x < -240.0 || transform_b.translation.x > 240.0 {
+        exit.write(AppExit::Success);
+    }
+
+    if aabb((transform_1.translation.x, transform_1.translation.y, 10.0, 75.0), (transform_b.translation.x, transform_b.translation.y, 7.5, 7.5)) {
+        ball_dir.x *= -1.0;
+        score_1.val += 1
+    }
+
+    if aabb((transform_2.translation.x, transform_2.translation.y, 10.0, 75.0), (transform_b.translation.x, transform_b.translation.y, 7.5, 7.5)) {
+        ball_dir.x *= -1.0;
+        score_2.val += 1
+    }
+}
+
+fn aabb(obj_1: (f32, f32, f32, f32), obj_2: (f32, f32, f32, f32)) -> bool {
+    return obj_1.0 > obj_2.0 + obj_2.2 || obj_1.0 + obj_2.2 < obj_2.0 || obj_1.1 > obj_2.1 + obj_2.3 || obj_1.1 + obj_1.3 < obj_2.1
 }
