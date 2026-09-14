@@ -5,7 +5,7 @@ const WINDOW_HEIGHT: f32 = 270.0;
 const WINDOW_TITLE: &str = "Pong";
 const BACKGROUND_COLOR: Color = Color::BLACK;
 const PLAYER_SPEED: f32 = 250.0;
-const BALL_SPEED: f32 = 275.0;
+const BALL_SPEED: f32 = 150.0;
 
 pub struct GamePlugin;
 
@@ -47,21 +47,21 @@ fn setup(
     ));
 
     commands.spawn((
-        Mesh2d(meshes.add(RectangleMeshBuilder::new(10.0, 60.0).build())),
+        Mesh2d(meshes.add(RectangleMeshBuilder::new(10.0, 75.0).build())),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::WHITE))),
         Transform::from_xyz(-235.0, 0.0, 0.0),
         Player1,
     ));
 
     commands.spawn((
-        Mesh2d(meshes.add(RectangleMeshBuilder::new(10.0, 60.0).build())),
+        Mesh2d(meshes.add(RectangleMeshBuilder::new(10.0, 75.0).build())),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::WHITE))),
         Transform::from_xyz(235.0, 0.0, 0.0),
         Player2,
     ));
 
     commands.spawn((
-        Mesh2d(meshes.add(RectangleMeshBuilder::new(15.0, 15.0).build())),
+        Mesh2d(meshes.add(RectangleMeshBuilder::new(7.5, 7.5).build())),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::WHITE))),
         Transform::from_xyz(0.0,0.0,0.0),
         BallDir {x: 1.0, y: 1.0},
@@ -80,7 +80,7 @@ pub struct BallDir {
     y: f32,
 }
 
-fn move_players(mut transform_1: Single<&mut Transform, With<Player1>>, mut transform_2: Single<&mut Transform, With<Player2>>, time: Res<Time>, keys: Res<ButtonInput<KeyCode>>){
+fn move_players(mut transform_1: Single<&mut Transform, (With<Player1>, Without<Player2>)>, mut transform_2: Single<&mut Transform, (With<Player2>, Without<Player1>)>, time: Res<Time>, keys: Res<ButtonInput<KeyCode>>){
     if keys.pressed(KeyCode::KeyW) {
         transform_1.translation.y += PLAYER_SPEED * time.delta_secs();
     }
@@ -100,9 +100,10 @@ fn move_players(mut transform_1: Single<&mut Transform, With<Player1>>, mut tran
     transform_2.translation.y = transform_2.translation.y.clamp(-105.0, 105.0);
 }
 
-fn move_ball(mut query: Query<(&BallDir, &mut Transform), With<BallDir>>, time: Res<Time>) {
-    let (ball_dir, mut transform_b) = query.single_mut().unwrap();
+fn move_ball(mut ball: Single<(&BallDir, &mut Transform)>, time: Res<Time>) {
+    let ball_dir = ball.0;
+    let transform_b = &mut ball.1;
 
     transform_b.translation.x += ball_dir.x * time.delta_secs() * BALL_SPEED;
-    transform_b.translation.x += ball_dir.x * time.delta_secs() * BALL_SPEED;
+    transform_b.translation.y += ball_dir.y * time.delta_secs() * BALL_SPEED;
 }
