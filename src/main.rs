@@ -68,13 +68,42 @@ fn setup(
         Transform::from_xyz(0.0,0.0,0.0),
         BallDir {x: 1.0, y: 1.0},
     ));
+
+    commands.spawn((
+        Text2d::new("0"),
+        TextFont {
+            font_size: FontSize::Px(24.0),
+            ..default()
+        },
+        TextColor(Color::srgb(1.0, 1.0, 1.0)),
+        Transform::from_xyz(-220.0, 120.0, 0.0),
+        Player1ScoreText,
+    ));
+
+    commands.spawn((
+        Text2d::new("0"),
+        TextFont {
+            font_size: FontSize::Px(24.0),
+            ..default()
+        },
+        TextColor(Color::srgb(1.0, 1.0, 1.0)),
+        Transform::from_xyz(220.0, 120.0, 0.0),
+        Player2ScoreText,
+    ));
 }
 
 #[derive(Component)]
 pub struct Player1;
 
 #[derive(Component)]
+pub struct Player1ScoreText;
+
+
+#[derive(Component)]
 pub struct Player2;
+
+#[derive(Component)]
+pub struct Player2ScoreText;
 
 #[derive(Component)]
 pub struct Score {
@@ -115,9 +144,15 @@ fn move_ball(mut ball: Single<(&BallDir, &mut Transform)>, time: Res<Time>) {
     transform_b.translation.y += ball_dir.y * time.delta_secs() * BALL_SPEED;
 }
 
-fn collide_and_score(mut score_1: Single<&mut Score, (With<Player1>, Without<Player2>)>, mut score_2: Single<&mut Score, (With<Player2>, Without<Player1>)>, transform_b: Single<&Transform, With<BallDir>>, mut ball_dir: Single<&mut BallDir>, transform_1: Single<&Transform, (With<Player1>, Without<Player2>)>, transform_2: Single<&Transform, (With<Player2>, Without<Player1>)>, mut exit: MessageWriter<AppExit>) {
-    if transform_b.translation.y > 135.0 || transform_b.translation.y < -135.0 {
+fn collide_and_score(mut score_text_1: Single<&mut Text2d, (With<Player1ScoreText>, Without<Player2ScoreText>)>, mut score_text_2: Single<&mut Text2d, (With<Player2ScoreText>, Without<Player1ScoreText>)>, mut score_1: Single<&mut Score, (With<Player1>, Without<Player2>)>, mut score_2: Single<&mut Score, (With<Player2>, Without<Player1>)>, mut transform_b: Single<&mut Transform, (With<BallDir>, Without<Player1>, Without<Player2>)>, mut ball_dir: Single<&mut BallDir>, transform_1: Single<&Transform, (With<Player1>, Without<Player2>, Without<BallDir>)>, transform_2: Single<&Transform, (With<Player2>, Without<Player1>, Without<BallDir>)>, mut exit: MessageWriter<AppExit>) {
+    if transform_b.translation.y > 135.0 {
         ball_dir.y *= -1.0;
+        transform_b.translation.y = 135.0;
+    }
+
+    if transform_b.translation.y < -135.0 {
+        ball_dir.y *= -1.0;
+        transform_b.translation.y = -135.0;
     }
 
     if transform_b.translation.x < -240.0 || transform_b.translation.x > 240.0 {
@@ -126,15 +161,19 @@ fn collide_and_score(mut score_1: Single<&mut Score, (With<Player1>, Without<Pla
 
     if aabb((transform_1.translation.x, transform_1.translation.y, 10.0, 75.0), (transform_b.translation.x, transform_b.translation.y, 7.5, 7.5)) {
         ball_dir.x *= -1.0;
-        score_1.val += 1
+        transform_b.translation.x = -220.0;
+        score_1.val += 1;
+        score_text_1.0 = score_1.val.to_string();
     }
 
     if aabb((transform_2.translation.x, transform_2.translation.y, 10.0, 75.0), (transform_b.translation.x, transform_b.translation.y, 7.5, 7.5)) {
         ball_dir.x *= -1.0;
-        score_2.val += 1
+        transform_b.translation.x = 220.0;
+        score_2.val += 1;
+        score_text_2.0 = score_2.val.to_string();
     }
 }
 
 fn aabb(obj_1: (f32, f32, f32, f32), obj_2: (f32, f32, f32, f32)) -> bool {
-    return obj_1.0 > obj_2.0 + obj_2.2 || obj_1.0 + obj_2.2 < obj_2.0 || obj_1.1 > obj_2.1 + obj_2.3 || obj_1.1 + obj_1.3 < obj_2.1
+    return obj_1.0 - obj_1.2/2.0 < obj_2.0 + obj_2.2/2.0 && obj_1.1 - obj_1.3/2.0 < obj_2.1 + obj_2.3/2.0 && obj_1.0 + obj_1.2/2.0 > obj_2.0 - obj_2.2/2.0 && obj_1.1 + obj_1.3/2.0 > obj_2.1 - obj_2.3/2.0
 }
